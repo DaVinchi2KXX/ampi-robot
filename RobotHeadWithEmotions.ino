@@ -67,6 +67,8 @@ uint8_t anglePitch = MID_ANGLE_PITCH;
 
 // Создаём константу для хранения паузы между поворотом вала сервопривода
 constexpr uint8_t ANGLE_RANGE = 2;
+// Используем отдельную константу для расчёта количества эмоций
+constexpr uint8_t EMOTION_COUNT = 6;
 
 // ==================== ИКОНКИ НАПРАВЛЕНИЙ ВЗГЛЯДА ====================
 
@@ -136,6 +138,22 @@ constexpr uint8_t ICON_EYE_SURPRISED[] PROGMEM = {
   0x3c, 0x7e, 0xff, 0xe7, 0xe7, 0xff, 0x7e, 0x3c
 };
 
+// ==================== СЕРДЕЧКИ ====================
+// Создаём иконку «Сердечки»
+constexpr uint8_t ICON_EYE_LOVE[] PROGMEM = {
+  0x0c, 0x1e, 0x3f, 0x7e, 0x3f, 0x1e, 0x0c, 0x00
+};
+
+// ==================== СОНЛИВОСТЬ ====================
+// Создаём иконки «Сонливость»
+constexpr uint8_t ICON_EYE_SLEEPY_L[] PROGMEM = {
+  0x40, 0x20, 0x10, 0x08, 0x04, 0x0e, 0x1f, 0x00
+};
+
+constexpr uint8_t ICON_EYE_SLEEPY_R[] PROGMEM = {
+  0x02, 0x04, 0x08, 0x10, 0x20, 0x70, 0xf8, 0x00
+};
+
 // ==================== РЕЖИМЫ РАБОТЫ ====================
 
 // Создаём перечисление режимов робота
@@ -155,7 +173,9 @@ enum Emotion {
   EMOTION_HAPPY,      // Радость
   EMOTION_ANGRY,      // Злость
   EMOTION_SAD,        // Грусть
-  EMOTION_SURPRISED   // Удивление
+  EMOTION_SURPRISED,  // Удивление
+  EMOTION_LOVE,       // Сердечки
+  EMOTION_SLEEPY      // Сонливость
 };
 
 // Создаём переменную для хранения режима работы
@@ -293,13 +313,13 @@ void remoteHandlerHeadControl() {
         break;
 
       case LEFT:
-        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         servoYaw.write(angleYaw);
         drawIcon(ICON_EYE_LEFT, ICON_EYE_LEFT);
         break;
 
       case RIGHT:
-        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         servoYaw.write(angleYaw);
         drawIcon(ICON_EYE_RIGHT, ICON_EYE_RIGHT);
         break;
@@ -317,7 +337,7 @@ void remoteHandlerHeadControl() {
         break;
 
       case UP_LEFT:
-        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         anglePitch = constrain(anglePitch + ANGLE_RANGE, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
         servoYaw.write(angleYaw);
         servoPitch.write(anglePitch);
@@ -325,7 +345,7 @@ void remoteHandlerHeadControl() {
         break;
 
       case UP_RIGHT:
-        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         anglePitch = constrain(anglePitch + ANGLE_RANGE, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
         servoYaw.write(angleYaw);
         servoPitch.write(anglePitch);
@@ -333,7 +353,7 @@ void remoteHandlerHeadControl() {
         break;
 
       case DOWN_LEFT:
-        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         anglePitch = constrain(anglePitch - ANGLE_RANGE, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
         servoYaw.write(angleYaw);
         servoPitch.write(anglePitch);
@@ -341,7 +361,7 @@ void remoteHandlerHeadControl() {
         break;
 
       case DOWN_RIGHT:
-        angleYaw = constrain(angleYaw - ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+        angleYaw = constrain(angleYaw + ANGLE_RANGE, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
         anglePitch = constrain(anglePitch - ANGLE_RANGE, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
         servoYaw.write(angleYaw);
         servoPitch.write(anglePitch);
@@ -378,8 +398,8 @@ void remoteHandlerHeadControl() {
         break;
 
       case MODE3:
-        // Удивление
-        showEmotion(EMOTION_SURPRISED);
+        // Сердечки
+        showEmotion(EMOTION_LOVE);
         delay(2000);
         break;
     }
@@ -431,8 +451,8 @@ void remoteHandlerEmotions() {
         break;
 
       case MODE3:
-        // Удивление
-        showEmotion(EMOTION_SURPRISED);
+        // Сердечки
+        showEmotion(EMOTION_LOVE);
         break;
 
       case UP:
@@ -478,7 +498,7 @@ void toggleMode() {
 
 // Переключение на следующую эмоцию
 void nextEmotion() {
-  currentEmotion = (Emotion)((currentEmotion + 1) % 4);
+  currentEmotion = (Emotion)((currentEmotion + 1) % EMOTION_COUNT);
 }
 
 // Отображение эмоции с анимацией
@@ -497,6 +517,12 @@ void showEmotion(Emotion emotion) {
       break;
     case EMOTION_SURPRISED:
       showSurprisedAnimation();
+      break;
+    case EMOTION_LOVE:
+      showLoveAnimation();
+      break;
+    case EMOTION_SLEEPY:
+      showSleepyAnimation();
       break;
   }
 
@@ -607,6 +633,81 @@ void showSurprisedAnimation() {
   drawIcon(ICON_EYE_STRAIGHT, ICON_EYE_STRAIGHT);
 }
 
+// Анимация «Сердечки»
+void showLoveAnimation() {
+  // Мягкое моргание с сердечками
+  for (int i = 0; i < 2; i++) {
+    drawIcon(ICON_EYE_OFF, ICON_EYE_OFF);
+    delay(120);
+    drawIcon(ICON_EYE_LOVE, ICON_EYE_LOVE);
+    delay(180);
+  }
+
+  // Небольшие кивки головой
+  anglePitch = constrain(MID_ANGLE_PITCH + 6, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+  servoPitch.write(anglePitch);
+  delay(150);
+  anglePitch = constrain(MID_ANGLE_PITCH - 6, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+  servoPitch.write(anglePitch);
+  delay(150);
+  anglePitch = MID_ANGLE_PITCH;
+  servoPitch.write(anglePitch);
+
+  // Небольшое покачивание влево-вправо
+  uint8_t initialYaw = angleYaw;
+  angleYaw = constrain(MID_ANGLE_YAW - 8, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+  servoYaw.write(angleYaw);
+  delay(180);
+  angleYaw = constrain(MID_ANGLE_YAW + 8, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+  servoYaw.write(angleYaw);
+  delay(180);
+  angleYaw = initialYaw;
+  servoYaw.write(angleYaw);
+
+  // Звук влюблённости
+  playLoveSound();
+
+  // Удерживаем эмоцию
+  delay(1200);
+
+  // Возвращаем нормальный вид
+  drawIcon(ICON_EYE_STRAIGHT, ICON_EYE_STRAIGHT);
+}
+
+// Анимация сонливости
+void showSleepyAnimation() {
+  // Мягкое закрытие глаз
+  drawIcon(ICON_EYE_SLEEPY_L, ICON_EYE_SLEEPY_R);
+
+  // Медленно опускаем голову
+  for (int i = 0; i < 6; i++) {
+    anglePitch = constrain(anglePitch - 2, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+    servoPitch.write(anglePitch);
+    delay(120);
+  }
+
+  // Спокойный звук сна
+  playSleepySound();
+
+  // Лёгкое возвратно-поступательное движение как «дремота»
+  for (int i = 0; i < 2; i++) {
+    anglePitch = constrain(anglePitch + 3, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+    servoPitch.write(anglePitch);
+    delay(200);
+    anglePitch = constrain(anglePitch - 3, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+    servoPitch.write(anglePitch);
+    delay(200);
+  }
+
+  // Возвращаем голову в центр
+  anglePitch = MID_ANGLE_PITCH;
+  servoPitch.write(anglePitch);
+  delay(300);
+
+  // Возвращаем нормальный вид
+  drawIcon(ICON_EYE_STRAIGHT, ICON_EYE_STRAIGHT);
+}
+
 // ==================== ЗВУКОВЫЕ ЭФФЕКТЫ ====================
 
 // Звук переключения режима
@@ -658,5 +759,25 @@ void playSurprisedSound() {
   delay(150);
   tone(BUZZER_PIN, 2000, 150);
   delay(200);
+  noTone(BUZZER_PIN);
+}
+
+// Звук сердечек
+void playLoveSound() {
+  int melody[] = { 880, 988, 1175, 988, 880 };
+  for (int i = 0; i < 5; i++) {
+    tone(BUZZER_PIN, melody[i], 120);
+    delay(160);
+  }
+  noTone(BUZZER_PIN);
+}
+
+// Звук сонливости
+void playSleepySound() {
+  int melody[] = { 523, 494, 440, 392 };
+  for (int i = 0; i < 4; i++) {
+    tone(BUZZER_PIN, melody[i], 200);
+    delay(260);
+  }
   noTone(BUZZER_PIN);
 }
