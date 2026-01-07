@@ -13,6 +13,9 @@
 // Подключаем библиотеку для работы со светодиодными матрицами
 #include <TroykaLedMatrix.h>
 
+// Подключаем заголовочный файл для последовательной связи
+#include "serial_commands.h"
+
 // Даём понятное имя пину 3 с пищалкой
 constexpr uint8_t BUZZER_PIN = 3;
 
@@ -219,6 +222,10 @@ struct AnimationFrame {
 // ==================== ФУНКЦИИ ====================
 
 void setup() {
+  // Инициализируем последовательную связь для управления с ПК
+  Serial.begin(SERIAL_BAUD);
+  while (!Serial && millis() < 3000); // Ожидание подключения (3 секунды таймаут)
+
   // Подключаем сервомоторы головы
   servoYaw.attach(SERVO_YAW_PIN);
   servoPitch.attach(SERVO_PITCH_PIN);
@@ -251,6 +258,11 @@ void setup() {
 }
 
 void loop() {
+  // Проверяем наличие команд по последовательному порту
+  if (Serial.available()) {
+    handleSerialCommand();
+  }
+
   if (robotState == ROBOT_ON) {
     handleRobotOn();
   } else {
@@ -780,4 +792,149 @@ void playSleepySound() {
     delay(260);
   }
   noTone(BUZZER_PIN);
+}
+
+// ==================== SERIAL COMMAND HANDLING ====================
+
+// Буфер для приёма команд по последовательному порту
+char serialBuffer[SERIAL_BUFFER_SIZE];
+uint8_t serialBufferIndex = 0;
+
+// Обработчик команд по последовательному порту
+void handleSerialCommand() {
+  while (Serial.available()) {
+    char c = Serial.read();
+
+    if (c == '\n') {
+      // Завершение команды - обрабатываем
+      serialBuffer[serialBufferIndex] = '\0';
+      processSerialCommand(serialBuffer);
+      serialBufferIndex = 0;
+    } else if (serialBufferIndex < SERIAL_BUFFER_SIZE - 1) {
+      // Добавляем символ в буфер
+      serialBuffer[serialBufferIndex++] = c;
+    }
+    // Если буфер переполнен, игнорируем лишние символы
+  }
+}
+
+// Обработка полученной команды
+void processSerialCommand(char* cmd) {
+  if (strlen(cmd) == 0) return;
+
+  char commandType = cmd[0];
+
+  switch (commandType) {
+    case CMD_MOVE:
+      // Команда перемещения: M<Yaw><Pitch>
+      handleMoveCommand(cmd + 1);
+      break;
+
+    case CMD_EMOTION:
+      // Команда эмоции: E<EmotionID>
+      handleEmotionCommand(cmd + 1);
+      break;
+
+    case CMD_STATUS:
+      // Запрос статуса: S
+      sendStatusResponse();
+      break;
+
+    case CMD_CONFIG:
+      // Конфигурация: C<ParamID><Value>
+      handleConfigCommand(cmd + 1);
+      break;
+
+    case CMD_PING:
+      // Сердцебиение: P
+      sendPongResponse();
+      break;
+
+    case CMD_STOP:
+      // Экстренная остановка: X
+      handleStopCommand();
+      break;
+
+    default:
+      // Неизвестная команда
+      sendErrorResponse(ERR_UNKNOWN_CMD);
+      break;
+  }
+}
+
+// Обработчик команды перемещения
+void handleMoveCommand(const char* data) {
+  MoveCommandData moveData = parseMoveCommand(data);
+
+  if (moveData.valid) {
+    // Применяем ограничения
+    angleYaw = constrain(moveData.yaw, MAX_ANGLE_YAW_R, MAX_ANGLE_YAW_L);
+    anglePitch = constrain(moveData.pitch, MAX_ANGLE_PITCH_DOWN, MAX_ANGLE_PITCH_UP);
+
+    // Приводим сервоприводы в движение
+    servoYaw.write(angleYaw);
+    servoPitch.write(anglePitch);
+
+    // Обновляем отображение глаз в зависимости от направления
+    if (angleYaw < MID_ANGLE_YAW - 10) {
+      drawIcon(ICON_EYE_LEFT, ICON_EYE_LEFT);
+    } else if (angleYaw > MID_ANGLE_YAW + 10) {
+      drawIcon(ICON_EYE_RIGHT, ICON_EYE_RIGHT);
+    } else if (anglePitch > MID_ANGLE_PITCH + 10) {
+      drawIcon(ICON_EYE_UP, ICON_EYE_UP);
+    } else if (anglePitch < MID_ANGLE_PITCH - 10) {
+      drawIcon(ICON_EYE_DOWN, ICON_EYE_DOWN);
+    } else {
+      drawIcon(ICON_EYE_STRAIGHT, ICON_EYE_STRAIGHT);
+    }
+
+    // Отправляем подтверждение
+    sendMoveAck(angleYaw, anglePitch);
+  } else {
+    sendErrorResponse(ERR_INVALID_DATA);
+  }
+}
+
+// Обработчик команды эмоции
+void handleEmotionCommand(const char* data) {
+  EmotionCommandData emotionData = parseEmotionCommand(data);
+
+  if (emotionData.valid) {
+    Emotion emotion = (Emotion)emotionData.emotionId;
+    showEmotion(emotion);
+    sendEmotionAck(emotionData.emotionId);
+  } else {
+    sendErrorResponse(ERR_INVALID_DATA);
+  }
+}
+
+// Обработчик команды конфигурации
+void handleConfigCommand(const char* data) {
+  ConfigCommandData configData = parseConfigCommand(data);
+
+  if (configData.valid) {
+    // В текущей реализации параметры только выводятся в отладочные целях
+    // В будущем можно добавить динамическое изменение ограничений
+    sendEmotionAck(configData.paramId); // Используем ACK как подтверждение
+  } else {
+    sendErrorResponse(ERR_INVALID_DATA);
+  }
+}
+
+// Обработчик команды экстренной остановки
+void handleStopCommand() {
+  // Останавливаем все движения, возвращаем голову в центр
+  angleYaw = MID_ANGLE_YAW;
+  anglePitch = MID_ANGLE_PITCH;
+  servoYaw.write(angleYaw);
+  servoPitch.write(anglePitch);
+  drawIcon(ICON_EYE_OFF, ICON_EYE_OFF);
+
+  sendStopAck();
+
+  // Короткая пауза, затем восстанавливаем нормальный вид
+  delay(500);
+  if (robotState == ROBOT_ON) {
+    drawIcon(ICON_EYE_STRAIGHT, ICON_EYE_STRAIGHT);
+  }
 }

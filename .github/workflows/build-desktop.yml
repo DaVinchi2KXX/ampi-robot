@@ -1,0 +1,140 @@
+name: Build Desktop Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Setup project
+        working-directory: robot_ampi_desktop
+        run: flutter pub get
+
+      - name: Build Linux release
+        working-directory: robot_ampi_desktop
+        run: flutter build linux --release
+
+      - name: Create Linux archive
+        run: |
+          cd robot_ampi_desktop/build/linux/x64/release/bundle
+          tar czf ../../../../../robot-ampi-desktop-linux-x64.tar.gz .
+          cd ../../../../../..
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-ampi-desktop-linux-x64
+          path: robot-ampi-desktop-linux-x64.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup project
+        working-directory: robot_ampi_desktop
+        run: flutter pub get
+
+      - name: Build Windows release
+        working-directory: robot_ampi_desktop
+        run: flutter build windows --release
+
+      - name: Create Windows archive
+        run: |
+          Compress-Archive -Path robot_ampi_desktop\build\windows\runner\Release\* -DestinationPath robot-ampi-desktop-windows-x64.zip
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-ampi-desktop-windows-x64
+          path: robot-ampi-desktop-windows-x64.zip
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup project
+        working-directory: robot_ampi_desktop
+        run: flutter pub get
+
+      - name: Build macOS release
+        working-directory: robot_ampi_desktop
+        run: flutter build macos --release
+
+      - name: Create macOS archive
+        run: |
+          cd robot_ampi_desktop/build/macos/Build/Products/Release
+          zip -r ../../../../../robot-ampi-desktop-macos-x64.zip robot_ampi_desktop.app
+          cd ../../../../../..
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: robot-ampi-desktop-macos-x64
+          path: robot-ampi-desktop-macos-x64.zip
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/robot-ampi-desktop-linux-x64/robot-ampi-desktop-linux-x64.tar.gz
+            artifacts/robot-ampi-desktop-windows-x64/robot-ampi-desktop-windows-x64.zip
+            artifacts/robot-ampi-desktop-macos-x64/robot-ampi-desktop-macos-x64.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
