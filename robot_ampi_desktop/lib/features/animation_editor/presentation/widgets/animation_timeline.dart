@@ -239,7 +239,7 @@ class AnimationTimeline extends ConsumerWidget {
       height: 24,
       decoration: BoxDecoration(
         color: Colors.grey.shade800,
-        border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
+        border: Border.all(color: color.withOpacity(0.5), width: 1),
         borderRadius: BorderRadius.circular(2),
       ),
       child: CustomPaint(

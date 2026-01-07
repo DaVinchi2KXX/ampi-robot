@@ -140,7 +140,7 @@ class _ConnectionPageState extends ConsumerState<ConnectionPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        initialValue: _selectedPort,
+                        value: _selectedPort,
                         decoration: const InputDecoration(
                           labelText: 'Serial Port',
                           border: OutlineInputBorder(),
@@ -266,7 +266,7 @@ class _ConnectionPageState extends ConsumerState<ConnectionPage> {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: color.withValues(alpha: 0.4),
+            color: color.withOpacity(0.4),
             blurRadius: 8,
             spreadRadius: 2,
           ),

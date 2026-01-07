@@ -268,10 +268,10 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
           shape: BoxShape.circle,
           color: widget.isEnabled
               ? theme.colorScheme.surfaceContainerHighest
-              : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
           boxShadow: [
             BoxShadow(
-              color: theme.colorScheme.shadow.withValues(alpha: 0.2),
+              color: theme.colorScheme.shadow.withOpacity(0.2),
               blurRadius: 20,
               spreadRadius: 5,
             ),
@@ -305,7 +305,7 @@ class _VirtualJoystickState extends State<VirtualJoystick> {
                       color: (widget.isEnabled
                               ? theme.colorScheme.primary
                               : theme.colorScheme.onSurfaceVariant)
-                          .withValues(alpha: 0.4),
+                          .withOpacity(0.4),
                       blurRadius: 12,
                       spreadRadius: 2,
                     ),

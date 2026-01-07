@@ -121,7 +121,7 @@ class LEDMatrixEditor extends ConsumerWidget {
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           color: led.isOn
-              ? (isLeftEye ? Colors.red : Colors.blue).withValues(alpha: led.brightness / 255)
+              ? (isLeftEye ? Colors.red : Colors.blue).withOpacity(led.brightness / 255)
               : Colors.grey.shade800,
           borderRadius: BorderRadius.circular(4),
           border: Border.all(
@@ -157,7 +157,7 @@ class LEDMatrixEditor extends ConsumerWidget {
         height: 32,
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: getRowColor().withValues(alpha: 0.3),
+          color: getRowColor().withOpacity(0.3),
           borderRadius: BorderRadius.circular(4),
         ),
         alignment: Alignment.center,
@@ -197,7 +197,7 @@ class LEDMatrixEditor extends ConsumerWidget {
         height: 24,
         margin: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          color: getColColor().withValues(alpha: 0.3),
+          color: getColColor().withOpacity(0.3),
           borderRadius: BorderRadius.circular(4),
         ),
         alignment: Alignment.center,
